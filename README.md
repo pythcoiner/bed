@@ -1,5 +1,7 @@
-# Build dependencies
 
+![bed](./assets/output.gif)
+
+# Build dependencies
 
 [just](https://github.com/casey/just), [rust toolchain](https://www.rust-lang.org/tools/install) and [Qt6 Framework](https://qt-project.org/) are needed for build:
 
