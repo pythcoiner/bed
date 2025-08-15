@@ -43,8 +43,12 @@ protected:
     void init() override;
     void doConnect() override;
 
+    static auto devices(size_t count) -> QString;
+
 private:
     QWidget *m_widget = nullptr;
+    QLabel *m_device_header = nullptr;
+    QLabel *m_device = nullptr;
     QLabel *m_key_header = nullptr;
     QList<widget::Key *> m_keys;
     QPushButton *m_add_key = nullptr;

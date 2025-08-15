@@ -75,9 +75,6 @@ void AppController::pollNotif() {
     }
     while (true) {
         auto notif = m_rust_controller.value()->poll();
-        if (notif != Notification::None) {
-            log_info(notif_to_string(notif));
-        }
         RustScreen screen;
         switch (notif) {
         case Notification::UpdateDecrypt:

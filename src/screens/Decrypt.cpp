@@ -23,6 +23,8 @@ Decrypt::~Decrypt() = default;
 
 void Decrypt::init() {
 
+    m_device_header = new QLabel("Hardware devices:");
+    m_device = new QLabel(devices(0));
     m_key_header = new QLabel("Keys:");
 
     m_add_key = new QPushButton("Add key");
@@ -101,6 +103,10 @@ void Decrypt::view() {
 
     auto *col = (new qontrol::Column)
                     ->pushSpacer()
+                    ->push(m_device_header)
+                    ->pushSpacer(V_SPACER)
+                    ->push(m_device)
+                    ->pushSpacer(V_SPACER)
                     ->push(m_key_header)
                     ->pushSpacer(V_SPACER)
                     ->push(m_scroll)
@@ -132,6 +138,10 @@ auto Decrypt::widget() -> QWidget * {
 }
 
 void Decrypt::update(RustScreen screen) {
+
+    // devices
+    m_device->setText(devices(screen.devices));
+
     // expand m_keys
     if (screen.keys.size() > m_keys.size()) {
         for (auto i = m_keys.size(); i < screen.keys.size(); i++) {
@@ -203,15 +213,7 @@ void Decrypt::update(RustScreen screen) {
         m_reset_btn->setEnabled(true);
     }
 
-    bool selectedKey = false;
-    for (auto key : screen.selected) {
-        if (key) {
-            selectedKey = true;
-            break;
-        }
-    }
-
-    if (screen.ciphertext.empty() || screen.keys.empty() || !selectedKey) {
+    if (screen.ciphertext.empty()) {
         m_decrypt_btn->setEnabled(false);
     } else {
         m_decrypt_btn->setEnabled(true);
@@ -237,5 +239,16 @@ void Decrypt::onCopy() {
         return;
     auto *clipboard = QGuiApplication::clipboard();
     clipboard->setText(m_data->toPlainText());
+}
+
+auto Decrypt::devices(size_t count) -> QString {
+    if (count == 0) {
+        return "0 connected, connect a device for "
+               "automatically fetch decryption keys.";
+    } else if (count == 1) {
+        return QString::number(count) + "device connected.";
+    } else {
+        return QString::number(count) + "devices connected.";
+    }
 }
 } // namespace screen
