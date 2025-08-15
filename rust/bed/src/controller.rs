@@ -138,7 +138,11 @@ impl Encrypt {
         self.update();
     }
     pub fn save(&self, path: String) {
-        // TODO:
+        if self.ciphertext.is_empty() {
+            let _ = self.error.send("Descriptor not encrypted.".to_string());
+            return;
+        }
+        write_to_file(&self.ciphertext, path, self.error.clone());
     }
     pub fn try_encrypt(&mut self) {
         let keys = self
@@ -303,28 +307,7 @@ impl Decrypt {
             let _ = self.error.send("Descriptor not decrypted.".to_string());
             return;
         }
-
-        let file_path = match PathBuf::from_str(&path) {
-            Ok(p) => p,
-            Err(_) => {
-                let _ = self.error.send("Descriptor not decrypted.".to_string());
-                return;
-            }
-        };
-
-        let mut file = match File::create(file_path) {
-            Ok(f) => f,
-            Err(e) => {
-                let _ = self.error.send(format!("fail to open {path}: {e:?}"));
-                return;
-            }
-        };
-
-        if file.write_all(self.descriptor.as_bytes()).is_err() {
-            let _ = self
-                .error
-                .send("Fails to write descriptor to file.".to_string());
-        }
+        write_to_file(self.descriptor.as_bytes(), path, self.error.clone());
     }
 }
 
@@ -496,6 +479,28 @@ impl Controller {
         let _ = self
             .error_sender
             .send("File content cannot be decoded.".to_string());
+    }
+}
+
+fn write_to_file(bytes: &[u8], path: String, error: mpsc::Sender<String>) {
+    let file_path = match PathBuf::from_str(&path) {
+        Ok(p) => p,
+        Err(_) => {
+            let _ = error.send(format!("Invalid path: {path}"));
+            return;
+        }
+    };
+
+    let mut file = match File::create(file_path) {
+        Ok(f) => f,
+        Err(e) => {
+            let _ = error.send(format!("Fails to open {path}: {e:?}"));
+            return;
+        }
+    };
+
+    if file.write_all(bytes).is_err() {
+        let _ = error.send("Fails to write file.".to_string());
     }
 }
 
