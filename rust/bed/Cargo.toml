@@ -1,0 +1,21 @@
+[package]
+name = "bed"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["rlib", "cdylib", "staticlib"]
+doctest = false
+
+[dependencies]
+cxx = "1.0.143"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+log = "0.4.27"
+env_logger = "0.11.8"
+encrypted_backup = { git = "https://github.com/pythcoiner/encrypted_backup.git", branch = "liana", features = ["devices", "miniscript_latest"]}
+
+[dev-dependencies]
+
+[build-dependencies]
+cxx-build = "1.0.149"
