@@ -58,8 +58,6 @@ void Encrypt::doConnect() {
     connect(m_save_btn, &QPushButton::clicked, this, &Encrypt::onSelectFile,
             qontrol::UNIQUE);
     // Encrypt => AppController
-    connect(this, &Encrypt::onFileSelected, ctrl, &AppController::encryptSave,
-            qontrol::UNIQUE);
     connect(m_add_key, &QPushButton::clicked, ctrl,
             &AppController::encryptAddKey, qontrol::UNIQUE);
     connect(m_encrypt_btn, &QPushButton::clicked, ctrl,
@@ -214,16 +212,13 @@ void Encrypt::update(RustScreen screen) {
     view();
 }
 
-void Encrypt::onFileSelected(const QString &path) {
-    AppController::get()->encryptSave(path);
-}
-
 void Encrypt::onSelectFile() {
     auto *dialog = new QFileDialog(this);
     dialog->setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
     dialog->selectFile("bed.descriptor");
-    connect(dialog, &QFileDialog::fileSelected, this, &Encrypt::onFileSelected,
-            qontrol::UNIQUE);
+    auto *ctrl = AppController::get();
+    connect(dialog, &QFileDialog::fileSelected, ctrl,
+            &AppController::encryptSave, qontrol::UNIQUE);
     AppController::execModal(dialog);
 }
 

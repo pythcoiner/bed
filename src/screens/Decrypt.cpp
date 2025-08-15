@@ -63,9 +63,7 @@ void Decrypt::doConnect() {
             qontrol::UNIQUE);
     connect(m_copy_btn, &QPushButton::clicked, this, &Decrypt::onCopy,
             qontrol::UNIQUE);
-    // Decrypt => AppController
-    connect(this, &Decrypt::onFileSelected, ctrl, &AppController::decryptSave,
-            qontrol::UNIQUE);
+    // // Decrypt => AppController
     connect(m_add_key, &QPushButton::clicked, ctrl,
             &AppController::decryptAddKey, qontrol::UNIQUE);
     connect(m_decrypt_btn, &QPushButton::clicked, ctrl,
@@ -224,16 +222,13 @@ void Decrypt::update(RustScreen screen) {
     view();
 }
 
-void Decrypt::onFileSelected(const QString &path) {
-    AppController::get()->decryptSave(path);
-}
-
 void Decrypt::onSelectFile() {
     auto *dialog = new QFileDialog(this);
     dialog->setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
     dialog->selectFile("bed.descriptor");
-    connect(dialog, &QFileDialog::fileSelected, this, &Decrypt::onFileSelected,
-            qontrol::UNIQUE);
+    auto *ctrl = AppController::get();
+    connect(dialog, &QFileDialog::fileSelected, ctrl,
+            &AppController::decryptSave, qontrol::UNIQUE);
     AppController::execModal(dialog);
 }
 

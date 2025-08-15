@@ -29,7 +29,6 @@ public:
 public slots:
 
     void onSelectFile();
-    void onFileSelected(const QString &path);
     void onCopy();
 
 signals:

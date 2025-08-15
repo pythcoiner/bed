@@ -30,7 +30,6 @@ public slots:
 
     // save encrypted descriptor flow
     void onSelectFile();
-    void onFileSelected(const QString &path);
 
 signals:
     void deleteKey(size_t index);
