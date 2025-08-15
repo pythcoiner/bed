@@ -22,7 +22,10 @@ run(["cmake", ".."])
 run(["make", "-j20"])
 
 # cp compile_commands.json ../compile_commands.json
-src = build_dir / "compile_commands.json"
+src = Path("compile_commands.json")
 dst = Path("..") / "compile_commands.json"
 if src.exists():
     shutil.copy(src, dst)
+    print(f"compile_commands.json updated ")
+else:
+    print(f"{src} does not exists at ({os.getcwd()})")

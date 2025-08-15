@@ -2,6 +2,7 @@ clean:
     rm -fRd ./build
     rm -fRd ./rust/bed/target
     rm -fRd ./lib
+    rm -fRd compile_commands.json
 
 clear:
     just clean
