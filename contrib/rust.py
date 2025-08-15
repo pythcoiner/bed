@@ -26,7 +26,9 @@ include_dir.mkdir()
 
 # cd ./rust/bed
 rust_dir = Path("rust") / "bed"
+rust_dir.mkdir(exist_ok=True)
 os.chdir(rust_dir)
+print(os.getcwd())
 
 # Run cargo build
 # cargo will:

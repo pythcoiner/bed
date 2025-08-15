@@ -10,7 +10,7 @@ endif()
 # build rust
 add_custom_target(
     RunBeforeBuild ALL
-    COMMAND python3 rust.py ${CMAKE_BUILD_TYPE}
+    COMMAND python3 contrib/rust.py ${CMAKE_BUILD_TYPE}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     VERBATIM
 )

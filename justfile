@@ -5,14 +5,13 @@ clean:
 
 clear:
     just clean
-    rm -fRd ./rust/bed
     rm -fRd ./.cache
 
 make:
     just build
 
 build:
-    python3 ./build.py
+    python3 ./contrib/build.py
 
 run:
     ./build/Bed
