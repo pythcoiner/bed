@@ -208,7 +208,6 @@ void Encrypt::update(RustScreen screen) {
     }
 
     m_data->setText(txt);
-
     view();
 }
 

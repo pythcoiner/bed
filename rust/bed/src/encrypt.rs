@@ -30,7 +30,7 @@ impl From<Encrypt> for Screen {
             descriptor: value.descriptor.clone(),
             descriptor_valid: value.descriptor_valid,
             ciphertext: value.ciphertext.clone(),
-            btn_enabled: value.descriptor.is_empty(),
+            devices: 0,
             mode: Mode::Decrypt,
         }
     }

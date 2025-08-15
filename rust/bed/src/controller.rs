@@ -110,7 +110,7 @@ impl Controller {
         self.encrypt().clone().into()
     }
     pub fn decrypt_screen(&mut self) -> Screen {
-        self.decrypt().clone().into()
+        self.decrypt().into()
     }
     fn read_file(&self, file_path: String) -> Option<Vec<u8>> {
         let path = match PathBuf::from_str(&file_path) {
@@ -166,12 +166,13 @@ impl Controller {
     }
     pub fn drag_n_drop_encrypt(&mut self, bytes: Vec<u8>) {
         if let Ok(str) = String::from_utf8(bytes) {
-            if self.try_drop_key(&str, Mode::Encrypt) {
+            let trimmed = str.trim();
+            if self.try_drop_key(trimmed, Mode::Encrypt) {
                 let _ = self.notif_sender.send(Notification::UpdateEncrypt);
                 return;
             }
-            if Descriptor::<DescriptorPublicKey>::from_str(&str).is_ok() {
-                self.encrypt().set_descriptor(str);
+            if Descriptor::<DescriptorPublicKey>::from_str(trimmed).is_ok() {
+                self.encrypt().set_descriptor(trimmed.to_string());
                 let _ = self.notif_sender.send(Notification::UpdateEncrypt);
                 return;
             }
@@ -202,8 +203,10 @@ impl Controller {
     }
     pub fn drag_n_drop_decrypt(&mut self, bytes: Vec<u8>) {
         // check if it's a valid encrypted payload
-        if EncryptedBackup::new().set_encrypted_payload(&bytes).is_ok() {
+        if let Ok(backup) = EncryptedBackup::new().set_encrypted_payload(&bytes) {
             self.decrypt().set_ciphertext(bytes);
+            self.decrypt()
+                .set_derivation_paths(backup.get_derivation_paths());
             let _ = self.notif_sender.send(Notification::UpdateDecrypt);
             return;
         }

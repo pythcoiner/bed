@@ -5,6 +5,7 @@ mod encrypt;
 use controller::{init_controller, is_descriptor_valid, is_xpub_valid, Controller};
 use decrypt::Decrypt;
 use encrypt::Encrypt;
+use log::LevelFilter;
 use std::fmt::Display;
 
 #[cxx::bridge]
@@ -53,7 +54,7 @@ pub mod bed {
         descriptor: String,
         descriptor_valid: bool,
         ciphertext: Vec<u8>,
-        btn_enabled: bool,
+        devices: usize,
         mode: Mode,
     }
 
@@ -111,7 +112,7 @@ impl Default for Screen {
             descriptor: Default::default(),
             descriptor_valid: false,
             ciphertext: Default::default(),
-            btn_enabled: Default::default(),
+            devices: 0,
             mode: Default::default(),
         }
     }
@@ -170,8 +171,10 @@ impl From<log::LevelFilter> for LogLevel {
 
 pub fn init_rust_logger(level: LogLevel) {
     let level = level.into();
-    env_logger::builder().filter_level(level).init();
-    log::info!("init_rust_logger()");
+    env_logger::builder()
+        .filter_level(level)
+        .filter(Some("ledger_transport_hidapi"), LevelFilter::Off)
+        .init();
 }
 
 #[allow(clippy::needless_pass_by_value)]
