@@ -1,9 +1,11 @@
-use std::fmt::Display;
 mod controller;
+mod decrypt;
+mod encrypt;
 
-use controller::{
-    init_controller, is_descriptor_valid, is_xpub_valid, Controller, Decrypt, Encrypt,
-};
+use controller::{init_controller, is_descriptor_valid, is_xpub_valid, Controller};
+use decrypt::Decrypt;
+use encrypt::Encrypt;
+use std::fmt::Display;
 
 #[cxx::bridge]
 #[allow(clippy::unnecessary_box_returns)]
