@@ -3,30 +3,43 @@ cmake_minimum_required(VERSION 3.22)
 set(BIN Bed)
 project(${BIN} VERSION 0.0.1 LANGUAGES CXX)
 
+# build type
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# build rust
-add_custom_target(
-    RunBeforeBuild ALL
-    COMMAND python3 contrib/rust.py ${CMAKE_BUILD_TYPE}
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    VERBATIM
-)
+if(NOT TARGET_OS)
+    message(FATAL_ERROR "TARGET_OS must be defined")
+endif()
+message(STATUS "TARGET_OS=${TARGET_OS}")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_library(bed STATIC IMPORTED)
-set_target_properties(bed PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/lib/libbed.a
-)
+# rust lib path
+if(TARGET_OS STREQUAL "linux")
+    find_library(BED
+        NAMES bed
+        PATHS "lib/linux/"
+        NO_DEFAULT_PATH
+        REQUIRED
+    )
+elseif(TARGET_OS STREQUAL "windows")
+    find_library(BED
+        NAMES bed
+        PATHS "lib/windows/"
+        NO_DEFAULT_PATH
+        REQUIRED
+    )
+endif()
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(libudev REQUIRED IMPORTED_TARGET libudev)
+if(TARGET_OS STREQUAL "linux")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(libudev REQUIRED IMPORTED_TARGET libudev)
+    set(UDEV_TARGET PkgConfig::libudev)
+endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core)
 
@@ -35,7 +48,7 @@ include(FetchContent)
 if(NOT DEFINED ENV{OFFLINE} OR "$ENV{OFFLINE}" STREQUAL "false")
     FetchContent_Declare(qontrol
         GIT_REPOSITORY https://github.com/pythcoiner/qontrol.git
-        GIT_TAG 4444fc3
+        GIT_TAG 316b780
     )
 else()
     FetchContent_Declare(qontrol
@@ -61,12 +74,7 @@ qt_add_executable(${BIN}
     ${SOURCES}
 )
 
-# ensure rust lib is built BEFORE c++
-add_dependencies(${BIN} RunBeforeBuild)
-
-add_dependencies(${BIN} 
-    qontrol
-)
+add_dependencies(${BIN} qontrol)
 
 target_include_directories(${BIN}
   PRIVATE
@@ -74,16 +82,30 @@ target_include_directories(${BIN}
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
 )
 
-find_package(OpenSSL REQUIRED)
-target_link_libraries(${BIN} 
-    PRIVATE 
-    Qt6::Gui 
-    Qt6::Core 
-    Qt6::Widgets 
-    qontrol
-    bed
-    PkgConfig::libudev
-)
+if(TARGET_OS STREQUAL "windows")
+    target_link_libraries(${BIN}
+        PRIVATE
+        Qt6::Gui
+        Qt6::Core
+        Qt6::Widgets
+        qontrol
+        ${BED}
+        ws2_32
+        bcrypt
+        ntdll
+        setupapi
+    )
+else()
+    target_link_libraries(${BIN}
+        PRIVATE
+        Qt6::Gui
+        Qt6::Core
+        Qt6::Widgets
+        qontrol
+        ${BED}
+        ${UDEV_TARGET}
+    )
+endif()
 
 set_target_properties(${BIN} PROPERTIES
     WIN32_EXECUTABLE ON
