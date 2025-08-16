@@ -3,30 +3,49 @@ cmake_minimum_required(VERSION 3.22)
 set(BIN Bed)
 project(${BIN} VERSION 0.0.1 LANGUAGES CXX)
 
+# build type
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# build rust
-add_custom_target(
-    RunBeforeBuild ALL
-    COMMAND python3 contrib/rust.py ${CMAKE_BUILD_TYPE}
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    VERBATIM
-)
+if(NOT TARGET_OS)
+    message(FATAL_ERROR "TARGET_OS must be defined")
+endif()
+message(STATUS "TARGET_OS=${TARGET_OS}")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_library(bed STATIC IMPORTED)
-set_target_properties(bed PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/lib/libbed.a
-)
+if(TARGET_OS STREQUAL "windows")
+    # TODO
+endif()
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(libudev REQUIRED IMPORTED_TARGET libudev)
+# rust lib path
+if(TARGET_OS STREQUAL "linux")
+    find_library(BED
+        NAMES bed # we looking for libbed.a here
+        PATHS "lib/linux/"
+        NO_DEFAULT_PATH
+        REQUIRED
+    )
+elseif(TARGET_OS STREQUAL "windows")
+    find_library(BED
+        NAMES bed # we looking for libbed.a here
+        PATHS "lib/windows/"
+        NO_DEFAULT_PATH
+        REQUIRED
+    )
+endif()
+
+if(TARGET_OS STREQUAL "linux")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(libudev REQUIRED IMPORTED_TARGET libudev)
+    set(UDEV_TARGET PkgConfig::libudev)
+else()
+    set(UDEV_TARGET "")
+endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core)
 
@@ -61,12 +80,7 @@ qt_add_executable(${BIN}
     ${SOURCES}
 )
 
-# ensure rust lib is built BEFORE c++
-add_dependencies(${BIN} RunBeforeBuild)
-
-add_dependencies(${BIN} 
-    qontrol
-)
+add_dependencies(${BIN} qontrol)
 
 target_include_directories(${BIN}
   PRIVATE
@@ -74,15 +88,14 @@ target_include_directories(${BIN}
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
 )
 
-find_package(OpenSSL REQUIRED)
 target_link_libraries(${BIN} 
     PRIVATE 
     Qt6::Gui 
     Qt6::Core 
     Qt6::Widgets 
     qontrol
-    bed
-    PkgConfig::libudev
+    ${BED}
+    ${UDEV_TARGET}
 )
 
 set_target_properties(${BIN} PROPERTIES
