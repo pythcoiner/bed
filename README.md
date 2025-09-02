@@ -17,6 +17,12 @@ And Qt6 Framework:
  - Debian: `sudo apt install qt6-base-dev`
  - Arch: `sudo pacman -S qt6-base`
 
+## Ubuntu dependencies
+
+```shell
+sudo apt install git curl build-essential qt6-base-dev libudev-dev pkg-config cmake libgl1-mesa-dev
+```
+
 ## Build commands
 
 ```shell
