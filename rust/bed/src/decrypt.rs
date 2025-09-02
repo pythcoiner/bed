@@ -3,7 +3,7 @@ use crate::{
     lock, wrap, Mode,
 };
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     str::FromStr,
     sync::{mpsc, Arc, Mutex},
     thread::{self, JoinHandle},
@@ -66,7 +66,7 @@ pub struct InnerDecrypt {
     ciphertext: Vec<u8>,
     derivation_paths: Vec<DerivationPath>,
     devices: Vec<String>,
-    devices_keys: Vec<DescriptorPublicKey>,
+    devices_keys: BTreeMap<DescriptorPublicKey, bool /* deleted */>,
     notif: mpsc::Sender<Notification>,
     error: mpsc::Sender<String>,
     _rt: Runtime,
@@ -111,7 +111,7 @@ impl InnerDecrypt {
             ciphertext: vec![],
             derivation_paths: vec![],
             devices: vec![],
-            devices_keys: vec![],
+            devices_keys: BTreeMap::new(),
             notif,
             error,
             _rt,
@@ -133,17 +133,23 @@ impl InnerDecrypt {
         self.descriptor.clear();
         self.ciphertext.clear();
         self.derivation_paths.clear();
+        self.devices_keys.clear();
         self.update();
     }
     pub fn try_decrypt(&mut self) {
-        let mut keys = vec![];
-        let mut dpks: Vec<_> = self
+        let keys: Vec<_> = self
             .xpubs
             .iter()
-            .filter_map(|(s, _, _)| DescriptorPublicKey::from_str(s).ok())
+            .filter_map(|(s, _, selected)| {
+                DescriptorPublicKey::from_str(s).ok().filter(|_| *selected)
+            })
             .collect();
-        keys.append(&mut dpks);
-        keys.append(&mut self.devices_keys.clone());
+        if keys.is_empty() {
+            let msg = "Fail to decode backup: no keys".to_string();
+            log::error!("{msg}");
+            let _ = self.error.send(msg);
+            return;
+        }
         let mut pks = Vec::with_capacity(keys.len());
         for dpk in keys {
             let pk = dpk_to_pk(&dpk);
@@ -200,6 +206,14 @@ impl InnerDecrypt {
         self._add_xpub();
     }
     pub fn remove_xpub(&mut self, index: usize) {
+        if let Some((xpub_str, _, _)) = self.xpubs_mut().get(index) {
+            if let Ok(dpk) = DescriptorPublicKey::from_str(xpub_str) {
+                if let Some(deleted) = self.devices_keys.get_mut(&dpk) {
+                    // we mark the device key deleted
+                    *deleted = true;
+                }
+            }
+        }
         self._remove_xpub(index);
     }
 }
@@ -224,9 +238,9 @@ pub fn poll_devices(decrypt: Arc<Mutex<InnerDecrypt>>) -> JoinHandle<()> {
             {
                 let mut lock = decrypt.lock().expect("poisoned");
                 for k in keys {
-                    if !lock.devices_keys.contains(&k) {
-                        lock.devices_keys.push(k);
-                        // TODO: add a flag for deleted
+                    if !lock.devices_keys.contains_key(&k) {
+                        lock.devices_keys.insert(k.clone(), false);
+                        lock.xpubs_mut().push((k.to_string(), true, false));
                     }
                 }
             } // <- drop lock here
