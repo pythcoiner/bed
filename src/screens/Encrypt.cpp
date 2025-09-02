@@ -8,7 +8,6 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QTextEdit>
-#include <QtLogging>
 
 namespace screen {
 

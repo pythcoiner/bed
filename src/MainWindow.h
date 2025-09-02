@@ -5,7 +5,6 @@
 #include <QTabWidget>
 #include <QWidget>
 #include <Qontrol>
-#include <QtLogging>
 
 class MainWindow : public qontrol::Window {
     Q_OBJECT

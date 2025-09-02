@@ -6,7 +6,6 @@
 #include <QMargins>
 #include <QTabWidget>
 #include <QWidget>
-#include <QtLogging>
 
 MainWindow::MainWindow(QWidget *parent) : Window(parent) {
     AppController::init();

@@ -2,7 +2,6 @@
 #include "common.h"
 #include "include/bed.h"
 #include <QSystemTrayIcon>
-#include <QtLogging>
 
 AppController::AppController() = default;
 
