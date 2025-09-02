@@ -32,6 +32,8 @@ Note: the built binary will be located at `./build/Bed`
 
 ## Build dependencies:
 
+  - [Rust toolchain](https://www.rust-lang.org/tools/install)
+
   - [GNU Toolchain](https://winlibs.com) is used to build on windows, see
 installation
   instructions on the link.
