@@ -95,6 +95,7 @@ void Encrypt::view() {
                     ->push(m_key_header)
                     ->pushSpacer(V_SPACER)
                     ->push(m_scroll)
+                    ->pushSpacer(V_SPACER)
                     ->push(addK)
                     ->pushSpacer(V_SPACER)
                     ->push(m_data_header)
