@@ -7,7 +7,7 @@ AppController::AppController() = default;
 
 void AppController::init() {
     if (Controller::isInit()) {
-        qFatal() << "Controller have already been initialized!";
+        qCritical() << "Controller have already been initialized!";
     }
     Controller::init(new AppController);
     auto *ctrl = AppController::get();
