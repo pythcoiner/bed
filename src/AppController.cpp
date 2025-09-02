@@ -106,26 +106,26 @@ void AppController::pollError() {
 
 void AppController::tryDecrypt() {
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->decrypt().try_decrypt();
+        m_rust_controller.value()->decrypt()->try_decrypt();
     }
 }
 
 void AppController::decryptAddKey() {
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->decrypt().add_xpub();
+        m_rust_controller.value()->decrypt()->add_xpub();
     }
 }
 
 void AppController::decryptEditKey(size_t index, const QString &txt) {
     if (m_rust_controller.has_value()) {
         auto rTxt = rust::String(txt.toStdString());
-        m_rust_controller.value()->decrypt().edit_xpub(index, rTxt);
+        m_rust_controller.value()->decrypt()->edit_xpub(index, rTxt);
     }
 }
 
 void AppController::decryptDeleteKey(size_t index) {
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->decrypt().remove_xpub(index);
+        m_rust_controller.value()->decrypt()->remove_xpub(index);
     }
 }
 
@@ -136,15 +136,15 @@ auto AppController::isKeyValid(const QString &key) -> bool {
 
 void AppController::decryptSelectKey(size_t index, bool selected) {
     if (m_rust_controller.has_value()) {
-        return m_rust_controller.value()->decrypt().set_selected(index,
-                                                                 selected);
+        return m_rust_controller.value()->decrypt()->set_selected(index,
+                                                                  selected);
     }
 }
 
 void AppController::decryptSave(const QString &path) {
     auto rPath = rust::String(path.toStdString());
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->decrypt().save(rPath);
+        m_rust_controller.value()->decrypt()->save(rPath);
     }
 }
 
@@ -172,7 +172,7 @@ void AppController::dropped(const QString &file_path) {
 
 void AppController::decryptReset() {
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->decrypt().reset();
+        m_rust_controller.value()->decrypt()->reset();
     }
 }
 
@@ -188,51 +188,51 @@ auto AppController::isDescriptorValid(const QString &key) -> bool {
 
 void AppController::encryptEditKey(size_t index, const QString &txt) {
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->encrypt().edit_xpub(
+        m_rust_controller.value()->encrypt()->edit_xpub(
             index, rust::String(txt.toStdString()));
     }
 }
 
 void AppController::encryptAddKey() {
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->encrypt().add_xpub();
+        m_rust_controller.value()->encrypt()->add_xpub();
     }
 }
 
 void AppController::encryptDeleteKey(size_t index) {
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->encrypt().remove_xpub(index);
+        m_rust_controller.value()->encrypt()->remove_xpub(index);
     }
 }
 
 void AppController::encryptSelectKey(size_t index, bool selected) {
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->encrypt().set_selected(index, selected);
+        m_rust_controller.value()->encrypt()->set_selected(index, selected);
     }
 }
 
 void AppController::encryptReset() {
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->encrypt().reset();
+        m_rust_controller.value()->encrypt()->reset();
     }
 }
 
 void AppController::encryptSetDescriptor(const QString &txt) {
     if (m_rust_controller.has_value()) {
         auto rTxt = rust::String(txt.toStdString());
-        m_rust_controller.value()->encrypt().set_descriptor(rTxt);
+        m_rust_controller.value()->encrypt()->set_descriptor(rTxt);
     }
 }
 
 void AppController::tryEncrypt() {
     if (m_rust_controller.has_value()) {
-        m_rust_controller.value()->encrypt().try_encrypt();
+        m_rust_controller.value()->encrypt()->try_encrypt();
     }
 }
 
 void AppController::encryptSave(const QString &path) {
     if (m_rust_controller.has_value()) {
         auto rPath = rust::String(path.toStdString());
-        m_rust_controller.value()->encrypt().save(rPath);
+        m_rust_controller.value()->encrypt()->save(rPath);
     }
 }

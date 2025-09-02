@@ -1,6 +1,7 @@
 mod controller;
 mod decrypt;
 mod encrypt;
+mod generic;
 
 use controller::{init_controller, is_descriptor_valid, is_xpub_valid, Controller};
 use decrypt::Decrypt;
@@ -84,8 +85,8 @@ pub mod bed {
     extern "Rust" {
         #[rust_name = Controller]
         type RustController;
-        fn encrypt(&mut self) -> &mut Encrypt;
-        fn decrypt(&mut self) -> &mut Decrypt;
+        fn encrypt(&mut self) -> Box<Encrypt>;
+        fn decrypt(&mut self) -> Box<Decrypt>;
         fn poll(&self) -> Notification;
         fn error(&self) -> String;
         fn encrypt_screen(&mut self) -> Screen;

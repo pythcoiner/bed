@@ -3,7 +3,7 @@ use std::{
     io::{Read, Write},
     path::PathBuf,
     str::FromStr,
-    sync::mpsc,
+    sync::{mpsc, Arc, Mutex},
 };
 
 use encrypted_backup::{
@@ -13,58 +13,11 @@ use encrypted_backup::{
 
 use crate::{
     bed::{Mode, Notification, Screen},
-    decrypt::Decrypt,
-    encrypt::Encrypt,
+    decrypt::{Decrypt, InnerDecrypt},
+    encrypt::{Encrypt, InnerEncrypt},
+    generic::XpubScreen,
+    lock,
 };
-
-pub type XpubList = Vec<(String, bool /* valid */, bool /* selected */)>;
-
-pub trait XpubScreen {
-    fn xpubs_mut(&mut self) -> &mut XpubList;
-    fn update(&self);
-    fn _set_selected(&mut self, index: usize, selected: bool) {
-        let xpubs = self.xpubs_mut();
-        if index >= xpubs.len() {
-            return;
-        }
-        let entry = xpubs.get_mut(index).expect("checked");
-        entry.2 = selected;
-    }
-    fn _edit_xpub(&mut self, index: usize, xpub: String) {
-        let xpubs = self.xpubs_mut();
-        let valid = is_xpub_valid(&xpub);
-        if index >= xpubs.len() {
-            log::error!("Decrypt::edit_xpub(): index out of bound.");
-            return;
-        }
-        let entry = xpubs.get_mut(index).expect("checked");
-        entry.0 = xpub;
-        entry.1 = valid;
-        if !valid {
-            entry.2 = false;
-        }
-        self.update();
-    }
-    fn _add_xpub(&mut self) {
-        self.xpubs_mut().push((String::new(), false, false));
-        self.update();
-    }
-    fn _remove_xpub(&mut self, index: usize) {
-        let xpubs = self.xpubs_mut();
-        if index < xpubs.len() {
-            xpubs.remove(index);
-        }
-        self.update();
-    }
-    fn contains(&mut self, key: &str) -> bool {
-        for (k, _, _) in self.xpubs_mut() {
-            if k == key {
-                return true;
-            }
-        }
-        false
-    }
-}
 
 #[derive(Debug)]
 pub struct Controller {
@@ -80,8 +33,12 @@ impl Controller {
     pub fn new() -> Self {
         let (notif_sender, notif) = mpsc::channel();
         let (error_sender, error) = mpsc::channel();
-        let encrypt = Encrypt::new(notif_sender.clone(), error_sender.clone());
-        let decrypt = Decrypt::new(notif_sender.clone(), error_sender.clone());
+        let encrypt = InnerEncrypt::new(notif_sender.clone(), error_sender.clone());
+        let encrypt = Encrypt {
+            inner: Arc::new(Mutex::new(encrypt)),
+        };
+        let decrypt = InnerDecrypt::new(notif_sender.clone(), error_sender.clone());
+        let decrypt = Decrypt { inner: decrypt };
         Self {
             encrypt,
             decrypt,
@@ -92,11 +49,11 @@ impl Controller {
         }
     }
 
-    pub fn encrypt(&mut self) -> &mut Encrypt {
-        &mut self.encrypt
+    pub fn encrypt(&mut self) -> Box<Encrypt> {
+        Box::new(self.encrypt.clone())
     }
-    pub fn decrypt(&mut self) -> &mut Decrypt {
-        &mut self.decrypt
+    pub fn decrypt(&mut self) -> Box<Decrypt> {
+        Box::new(self.decrypt.clone())
     }
 
     pub fn poll(&self) -> Notification {
@@ -107,10 +64,10 @@ impl Controller {
         self.error.try_recv().unwrap_or_default()
     }
     pub fn encrypt_screen(&mut self) -> Screen {
-        self.encrypt().clone().into()
+        (*self.encrypt()).into()
     }
     pub fn decrypt_screen(&mut self) -> Screen {
-        self.decrypt().into()
+        (*self.decrypt()).into()
     }
     fn read_file(&self, file_path: String) -> Option<Vec<u8>> {
         let path = match PathBuf::from_str(&file_path) {
@@ -187,12 +144,19 @@ impl Controller {
             match mode {
                 Mode::Encrypt => {
                     if !self.encrypt().contains(&dpk_str) {
-                        self.encrypt().xpubs_mut().push((dpk_str, true, true));
+                        self.encrypt()
+                            .inner
+                            .lock()
+                            .expect("poisoned")
+                            .xpubs_mut()
+                            .push((dpk_str, true, true));
                     }
                 }
                 Mode::Decrypt => {
-                    if !self.decrypt().contains(&dpk_str) {
-                        self.decrypt().xpubs_mut().push((dpk_str, true, true));
+                    let decrypt = *self.decrypt();
+                    let mut lock = lock!(decrypt);
+                    if !lock.contains(&dpk_str) {
+                        lock.xpubs_mut().push((dpk_str, true, true));
                     }
                 }
                 _ => unreachable!(),
@@ -204,9 +168,10 @@ impl Controller {
     pub fn drag_n_drop_decrypt(&mut self, bytes: Vec<u8>) {
         // check if it's a valid encrypted payload
         if let Ok(backup) = EncryptedBackup::new().set_encrypted_payload(&bytes) {
-            self.decrypt().set_ciphertext(bytes);
-            self.decrypt()
-                .set_derivation_paths(backup.get_derivation_paths());
+            let decrypt = *self.decrypt();
+            let mut lock = lock!(decrypt);
+            lock.set_ciphertext(bytes);
+            lock.set_derivation_paths(backup.get_derivation_paths());
             let _ = self.notif_sender.send(Notification::UpdateDecrypt);
             return;
         }

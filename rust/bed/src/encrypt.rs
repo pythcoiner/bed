@@ -1,4 +1,8 @@
-use std::{collections::BTreeSet, str::FromStr, sync::mpsc};
+use std::{
+    collections::BTreeSet,
+    str::FromStr,
+    sync::{mpsc, Arc, Mutex},
+};
 
 use encrypted_backup::{
     descriptor::dpk_to_pk,
@@ -8,11 +12,38 @@ use encrypted_backup::{
 
 use crate::{
     bed::{Mode, Notification, Screen},
-    controller::{write_to_file, XpubList, XpubScreen},
+    controller::write_to_file,
+    generic::{XpubList, XpubScreen},
+    lock, wrap,
 };
 
 #[derive(Debug, Clone)]
 pub struct Encrypt {
+    pub inner: Arc<Mutex<InnerEncrypt>>,
+}
+
+wrap!(Encrypt);
+
+impl Encrypt {
+    pub fn reset(&mut self) {
+        lock!(self).reset();
+    }
+    pub fn try_encrypt(&mut self) {
+        lock!(self).try_encrypt();
+    }
+    pub fn save(&self, path: String) {
+        lock!(self).save(path);
+    }
+    pub fn set_descriptor(&mut self, descriptor: String) {
+        lock!(self).set_descriptor(descriptor);
+    }
+    pub fn contains(&mut self, key: &str) -> bool {
+        lock!(self).contains(key)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InnerEncrypt {
     xpubs: XpubList,
     descriptor: String,
     descriptor_valid: bool,
@@ -21,8 +52,8 @@ pub struct Encrypt {
     error: mpsc::Sender<String>,
 }
 
-impl From<Encrypt> for Screen {
-    fn from(value: Encrypt) -> Screen {
+impl From<&InnerEncrypt> for Screen {
+    fn from(value: &InnerEncrypt) -> Screen {
         Screen {
             keys: value.xpubs.iter().map(|(k, _v, _s)| k.clone()).collect(),
             valid: value.xpubs.iter().map(|(_k, v, _s)| *v).collect(),
@@ -36,7 +67,7 @@ impl From<Encrypt> for Screen {
     }
 }
 
-impl XpubScreen for Encrypt {
+impl XpubScreen for InnerEncrypt {
     fn xpubs_mut(&mut self) -> &mut XpubList {
         &mut self.xpubs
     }
@@ -45,7 +76,7 @@ impl XpubScreen for Encrypt {
     }
 }
 
-impl Encrypt {
+impl InnerEncrypt {
     pub fn new(notif: mpsc::Sender<Notification>, error: mpsc::Sender<String>) -> Self {
         Self {
             xpubs: vec![],
@@ -140,20 +171,5 @@ impl Encrypt {
             }
         };
         self.update();
-    }
-}
-
-impl Encrypt {
-    pub fn set_selected(&mut self, index: usize, selected: bool) {
-        self._set_selected(index, selected);
-    }
-    pub fn edit_xpub(&mut self, index: usize, xpub: String) {
-        self._edit_xpub(index, xpub);
-    }
-    pub fn add_xpub(&mut self) {
-        self._add_xpub();
-    }
-    pub fn remove_xpub(&mut self, index: usize) {
-        self._remove_xpub(index);
     }
 }

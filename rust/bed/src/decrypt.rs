@@ -1,11 +1,11 @@
-use crate::Mode;
+use crate::{
+    generic::{XpubList, XpubScreen},
+    lock, wrap, Mode,
+};
 use std::{
     collections::BTreeSet,
     str::FromStr,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        mpsc, Arc, Mutex,
-    },
+    sync::{mpsc, Arc, Mutex},
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -18,15 +18,34 @@ use encrypted_backup::{
     },
     tokio, Decrypted, EncryptedBackup,
 };
-use tokio::runtime::{Handle, Runtime};
+use tokio::runtime::Runtime;
 
 use crate::{
     bed::{Notification, Screen},
-    controller::{write_to_file, XpubList, XpubScreen},
+    controller::write_to_file,
 };
 
-impl From<&mut Decrypt> for Screen {
-    fn from(value: &mut Decrypt) -> Screen {
+#[derive(Debug, Clone)]
+pub struct Decrypt {
+    pub inner: Arc<Mutex<InnerDecrypt>>,
+}
+
+wrap!(Decrypt);
+
+impl Decrypt {
+    pub fn reset(&mut self) {
+        lock!(self).reset();
+    }
+    pub fn try_decrypt(&mut self) {
+        lock!(self).try_decrypt();
+    }
+    pub fn save(&self, path: String) {
+        lock!(self).save(path);
+    }
+}
+
+impl From<&InnerDecrypt> for Screen {
+    fn from(value: &InnerDecrypt) -> Screen {
         Screen {
             keys: value.xpubs.iter().map(|(k, _v, _s)| k.clone()).collect(),
             valid: value.xpubs.iter().map(|(_k, v, _s)| *v).collect(),
@@ -34,28 +53,28 @@ impl From<&mut Decrypt> for Screen {
             descriptor: value.descriptor.clone(),
             descriptor_valid: !value.descriptor.is_empty(),
             ciphertext: value.ciphertext.clone(),
-            devices: value.devices.lock().expect("poisoned").len(),
+            devices: value.devices.len(),
             mode: Mode::Decrypt,
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Decrypt {
+pub struct InnerDecrypt {
     xpubs: XpubList,
     descriptor: String,
     ciphertext: Vec<u8>,
-    derivation_paths: Arc<Mutex<Vec<DerivationPath>>>,
-    devices: Arc<Mutex<Vec<String>>>,
-    devices_keys: Arc<Mutex<Vec<DescriptorPublicKey>>>,
+    derivation_paths: Vec<DerivationPath>,
+    devices: Vec<String>,
+    devices_keys: Vec<DescriptorPublicKey>,
     notif: mpsc::Sender<Notification>,
     error: mpsc::Sender<String>,
     _rt: Runtime,
-    stop: Arc<AtomicBool>,
-    poller: JoinHandle<()>,
+    stop: bool,
+    poller: Option<JoinHandle<()>>,
 }
 
-impl XpubScreen for Decrypt {
+impl XpubScreen for InnerDecrypt {
     fn xpubs_mut(&mut self) -> &mut XpubList {
         &mut self.xpubs
     }
@@ -64,56 +83,56 @@ impl XpubScreen for Decrypt {
     }
 }
 
-impl Drop for Decrypt {
+impl Drop for InnerDecrypt {
     fn drop(&mut self) {
-        self.stop.store(true, Ordering::Relaxed);
-        while !self.poller.is_finished() {
-            thread::sleep(Duration::from_millis(100));
+        self.stop = true;
+        let mut stop = false;
+        loop {
+            if let Some(handle) = &self.poller {
+                if stop {
+                    return;
+                }
+                if handle.is_finished() {
+                    stop = true;
+                } else {
+                    thread::sleep(Duration::from_millis(100));
+                }
+            }
         }
     }
 }
 
-impl Decrypt {
-    pub fn new(notif: mpsc::Sender<Notification>, error: mpsc::Sender<String>) -> Self {
+impl InnerDecrypt {
+    pub fn new(notif: mpsc::Sender<Notification>, error: mpsc::Sender<String>) -> Arc<Mutex<Self>> {
         let _rt = Runtime::new().expect("Failed to create Tokio runtime");
-        let handle = _rt.handle().clone();
-        let stop = Arc::new(AtomicBool::new(false));
-        let derivation_paths = Arc::new(Mutex::new(vec![]));
-        let devices = Arc::new(Mutex::new(vec![]));
-        let devices_keys = Arc::new(Mutex::new(vec![]));
-        let poller = poll_devices(
-            handle,
-            derivation_paths.clone(),
-            devices.clone(),
-            devices_keys.clone(),
-            notif.clone(),
-            stop.clone(),
-        );
-        Self {
+        let new = Arc::new(Mutex::new(Self {
             xpubs: vec![],
             descriptor: String::new(),
             ciphertext: vec![],
-            derivation_paths,
-            devices,
-            devices_keys,
+            derivation_paths: vec![],
+            devices: vec![],
+            devices_keys: vec![],
             notif,
             error,
             _rt,
-            stop,
-            poller,
-        }
+            stop: false,
+            poller: None,
+        }));
+        let poller = poll_devices(new.clone());
+        new.lock().expect("poisoned").poller = Some(poller);
+        new
     }
     pub fn set_ciphertext(&mut self, ciphertext: Vec<u8>) {
         self.ciphertext = ciphertext;
     }
     pub fn set_derivation_paths(&mut self, paths: Vec<DerivationPath>) {
-        *self.derivation_paths.lock().expect("poisoned") = paths;
+        self.derivation_paths = paths;
     }
     pub fn reset(&mut self) {
         self.xpubs.clear();
         self.descriptor.clear();
         self.ciphertext.clear();
-        self.derivation_paths.lock().expect("poisoned").clear();
+        self.derivation_paths.clear();
         self.update();
     }
     pub fn try_decrypt(&mut self) {
@@ -124,7 +143,7 @@ impl Decrypt {
             .filter_map(|(s, _, _)| DescriptorPublicKey::from_str(s).ok())
             .collect();
         keys.append(&mut dpks);
-        keys.append(&mut self.devices_keys.lock().expect("poisoned").clone());
+        keys.append(&mut self.devices_keys.clone());
         let mut pks = Vec::with_capacity(keys.len());
         for dpk in keys {
             let pk = dpk_to_pk(&dpk);
@@ -170,7 +189,7 @@ impl Decrypt {
     }
 }
 
-impl Decrypt {
+impl InnerDecrypt {
     pub fn set_selected(&mut self, index: usize, selected: bool) {
         self._set_selected(index, selected);
     }
@@ -185,27 +204,32 @@ impl Decrypt {
     }
 }
 
-pub fn poll_devices(
-    rt: Handle,
-    derivation_paths: Arc<Mutex<Vec<DerivationPath>>>,
-    devices: Arc<Mutex<Vec<String>>>,
-    devices_keys: Arc<Mutex<Vec<DescriptorPublicKey>>>,
-    notif: mpsc::Sender<Notification>,
-    stop: Arc<AtomicBool>,
-) -> JoinHandle<()> {
+pub fn poll_devices(decrypt: Arc<Mutex<InnerDecrypt>>) -> JoinHandle<()> {
     thread::spawn(move || loop {
-        let stop_requested = stop.load(Ordering::Relaxed);
+        let stop_requested = decrypt.lock().expect("poisoned").stop;
         if stop_requested {
             return;
         }
 
         // we try to fetch keys only if we have derivation paths
-        let paths = derivation_paths.lock().expect("poisoned").clone();
+        let (paths, rt) = {
+            let lock = decrypt.lock().expect("poisoned");
+            let paths = lock.derivation_paths.clone();
+            let rt = lock._rt.handle().clone();
+            (paths, rt)
+        }; // <- drop the lock here
+
         if !paths.is_empty() {
             let keys = rt.block_on(encrypted_backup::signing_devices::collect_xpubs(paths));
-            *devices_keys.lock().expect("poisoned") = keys;
-        } else {
-            *devices_keys.lock().expect("poisoned") = vec![];
+            {
+                let mut lock = decrypt.lock().expect("poisoned");
+                for k in keys {
+                    if !lock.devices_keys.contains(&k) {
+                        lock.devices_keys.push(k);
+                        // TODO: add a flag for deleted
+                    }
+                }
+            } // <- drop lock here
         }
 
         // we always list devices
@@ -221,8 +245,11 @@ pub fn poll_devices(
             let name = d.device_kind().to_string();
             conn_devices.insert(name);
         }
-        *devices.lock().expect("poisoned") = conn_devices.into_iter().collect();
-        let _ = notif.send(Notification::UpdateDecrypt);
+        {
+            let mut lock = decrypt.lock().expect("poisoned");
+            lock.devices = conn_devices.into_iter().collect();
+            let _ = lock.notif.send(Notification::UpdateDecrypt);
+        } // <- drop the lock here
         thread::sleep(Duration::from_secs(3));
     })
 }
