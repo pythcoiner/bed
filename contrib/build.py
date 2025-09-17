@@ -146,12 +146,13 @@ def build():
     # make -j20
     run(make_cmd)
 
+    # move the binary to ./build/bin/
+    exe_path = "Bed.exe"
+    bin_dir =  Path("bin")
+    if not bin_dir.exists():
+        bin_dir.mkdir()
+
     if target == "windows":
-        # move the binary to ./build/bin/
-        exe_path = "Bed.exe"
-        bin_dir =  Path("bin")
-        if not bin_dir.exists():
-            bin_dir.mkdir()
         dst = bin_dir / "Bed.exe"
         shutil.move(exe_path, dst)
 
@@ -159,6 +160,11 @@ def build():
         qtdeploy_cmd = [f"{qt_path}/bin/windeployqt6", f"{bin_dir}/Bed.exe"]
         qtdeploy_cmd.append("--no-translations")
         run(qtdeploy_cmd)
+
+    elif target == "linux":
+        dst = bin_dir / "bed-x86_64-linux-gnu"
+        shutil.move(exe_path, dst)
+
 
     # cp compile_commands.json ../compile_commands.json
     src = Path("compile_commands.json")
