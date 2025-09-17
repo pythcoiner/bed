@@ -264,6 +264,6 @@ pub fn poll_devices(decrypt: Arc<Mutex<InnerDecrypt>>) -> JoinHandle<()> {
             lock.devices = conn_devices.into_iter().collect();
             let _ = lock.notif.send(Notification::UpdateDecrypt);
         } // <- drop the lock here
-        thread::sleep(Duration::from_secs(3));
+        thread::sleep(Duration::from_secs(10));
     })
 }
