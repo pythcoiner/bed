@@ -171,6 +171,37 @@ def build():
         qtdeploy_cmd.append("--no-translations")
         run(qtdeploy_cmd)
 
+    # build installer (windows only)
+    if target == "windows":
+        installer_dir = Path("installer")
+        if installer_dir.exists():
+            shutil.rmtree(installer_dir)
+        src_installer = Path("..")
+        src_installer = src_installer / "contrib"
+        src_installer = src_installer / "win"
+        shutil.copy(src_installer, installer_dir)
+        dst = installer_dir / "packages"
+        dst = dst / "bed"
+        dst = dst / "data"
+        shutil.move(bin_dir, dst)
+
+        # build installer
+        config_path = installer_dir / "config"
+        config_path = config_path / "config.xml"
+        config_path = str(config_path)
+        package_path = installer_dir / "packages"
+        package_path = package_path / "meta"
+        package_path = package_path / "package.xml"
+        package_path = str(package_path)
+        binarycreator_cmd = [
+            f"{qt_path}/bin/binarycreator",
+            "--offline-only",
+            "-c", config_path,
+            "-p", package_path,
+            f"{bin_dir}/Bed-Installer.exe"
+        ]
+        run(binarycreator_cmd)
+
     # cp compile_commands.json ../compile_commands.json
     src = Path("compile_commands.json")
     dst = Path("..") / "compile_commands.json"

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>Bed</Name>
+    <Version>0.0.2</Version>
+    <Publisher></Publisher>
+    <Title>Bed Setup</Title>
+    <StartMenuDir>Bed</StartMenuDir>
+    <TargetDir>@HomeDir@/Bed</TargetDir>
+</Installer>
