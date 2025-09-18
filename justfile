@@ -14,7 +14,7 @@ build:
     python3 ./contrib/build.py release linux
 
 buildw:
-    python3 ./contrib/build.py release windows
+    python ./contrib/build.py release windows
 
 run:
     ./build/Bed
