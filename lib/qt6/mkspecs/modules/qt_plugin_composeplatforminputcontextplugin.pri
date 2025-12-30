@@ -1,0 +1,6 @@
+QT_PLUGIN.composeplatforminputcontextplugin.TYPE = platforminputcontexts
+QT_PLUGIN.composeplatforminputcontextplugin.EXTENDS = -
+QT_PLUGIN.composeplatforminputcontextplugin.DEPENDS = core gui
+QT_PLUGIN.composeplatforminputcontextplugin.CLASS_NAME = QComposePlatformInputContextPlugin
+QT_PLUGIN.composeplatforminputcontextplugin.module_config = v2 staticlib
+QT_PLUGINS += composeplatforminputcontextplugin

@@ -1,0 +1,4 @@
+#!/nix/store/kga2r02rmyxl14sg96nxbdhifq3rb8lc-bash-5.1-p16/bin/sh
+# echo the invoked command
+set -x
+@original_strip@ @strip_arguments@ "$@"

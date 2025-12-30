@@ -3,36 +3,48 @@
 
 # Linux build
 
-[just](https://github.com/casey/just), [rust toolchain](https://www.rust-lang.org/tools/install)
-and [Qt6 Framework](https://qt-project.org/) are needed for build:
+## Requirements
 
-First install rust toolchain.
+- [Nix](https://nixos.org/download.html) package manager
+- [just](https://github.com/casey/just) command runner
 
-Then you can install just:
-```
-cargo install just
-```
+## Static Qt6
 
-And Qt6 Framework:
- - Debian: `sudo apt install qt6-base-dev`
- - Arch: `sudo pacman -S qt6-base`
+Qt6 is vendored and statically linked for Linux builds. The static Qt6 library is located at `lib/qt6/` and was built using [qt_static](https://github.com/pythcoiner/qt_static) at commit `9fde2bc`.
 
-## Ubuntu dependencies
+- **Qt version**: 6.6.3
+- **glibc target**: 2.35 (compatible with Ubuntu 22.04+, Fedora 36+, Debian 12+)
+- **ICU**: disabled (uses system locale)
+- **MSRV**: 1.82
 
-```shell
-sudo apt install git curl build-essential qt6-base-dev libudev-dev pkg-config cmake libgl1-mesa-dev
+### Runtime Dependencies
+
+The binary is statically linked against Qt6 but requires standard system libraries. On a typical desktop Linux installation, all dependencies should already be present.
+
+On minimal systems, you may need to install:
+
+```bash
+# Ubuntu/Debian
+sudo apt install libb2-1 libdouble-conversion3 libwacom9 \
+  libxcb-cursor0 libxcb-util1 libxcb-render-util0 \
+  libxcb-icccm4 libxcb-image0 libxcb-keysyms1
+
+# Fedora
+sudo dnf install libb2 double-conversion libwacom \
+  xcb-util-cursor xcb-util xcb-util-renderutil \
+  xcb-util-wm xcb-util-image xcb-util-keysyms
 ```
 
 ## Build commands
 
 ```shell
-just build # build
+just build # build (uses nix develop)
 just run   # run the binary
 just br    # build & run
 just clean # clean build assets
 ```
 
-Note: the built binary will be located at `./build/Bed`
+Note: the built binary will be located at `./build/bin/bed-x86_64-linux-gnu`
 
 # Windows build
 

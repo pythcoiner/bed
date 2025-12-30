@@ -1,8 +1,10 @@
 build/
-lib/
 compile_commands.json
 .cache/
 .todo
 CMakeCache.txt
 CMakeFiles/
 releases/
+lib/linux/
+lib/windows/
+lib/include/

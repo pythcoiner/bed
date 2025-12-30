@@ -1,0 +1,6 @@
+QT_PLUGIN.ibusplatforminputcontextplugin.TYPE = platforminputcontexts
+QT_PLUGIN.ibusplatforminputcontextplugin.EXTENDS = -
+QT_PLUGIN.ibusplatforminputcontextplugin.DEPENDS = gui core dbus
+QT_PLUGIN.ibusplatforminputcontextplugin.CLASS_NAME = QIbusPlatformInputContextPlugin
+QT_PLUGIN.ibusplatforminputcontextplugin.module_config = v2 staticlib
+QT_PLUGINS += ibusplatforminputcontextplugin

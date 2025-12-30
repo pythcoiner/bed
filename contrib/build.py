@@ -20,10 +20,13 @@ def build_rust(build_type, target="linux", offline=False):
 
     # create ./lib if not existing
     lib_dir = Path("lib")
+    lib_dir.mkdir(parents=True, exist_ok=True)
 
-    if lib_dir.exists():
-        shutil.rmtree(lib_dir)
-    lib_dir.mkdir(parents=True)
+    # Clean build artifacts but preserve vendored libs (qt6)
+    for subdir in ["include", "linux", "windows"]:
+        path = lib_dir / subdir
+        if path.exists():
+            shutil.rmtree(path)
 
     include_dir = lib_dir / "include"
     include_dir.mkdir()
@@ -139,6 +142,11 @@ def build():
         cmake_cmd.append(f"-DCMAKE_PREFIX_PATH={qt_path}")
         cmake_cmd.append("-G")
         cmake_cmd.append("MinGW Makefiles")
+    else:
+        # Use static Qt6 from lib/qt6
+        qt_static_path = Path("..") / "lib" / "qt6"
+        if qt_static_path.exists():
+            cmake_cmd.append(f"-DCMAKE_PREFIX_PATH={qt_static_path.resolve()}")
 
     # cmake ..
     run(cmake_cmd)
